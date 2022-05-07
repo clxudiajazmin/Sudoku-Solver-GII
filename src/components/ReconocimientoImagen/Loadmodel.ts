@@ -18,7 +18,7 @@ async function loadModel() {
   }
   modelLoadingPromise = new Promise(async (resolve, reject) => {
     await tf.setBackend("wasm");
-    _model = await tf.loadLayersModel('https://storage.googleapis.com/bucket_tfjs/model.json');
+    _model = await tf.loadLayersModel('../../assets/model.json');
     resolve(_model);
     console.log("Model Cargado")
   });
