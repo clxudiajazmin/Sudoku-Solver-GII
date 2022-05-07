@@ -1,0 +1,13 @@
+.sudoku__camera{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center; 
+}
+
+.sudoku__camera-video{
+    margin-top: 50px;
+    width: 600px;
+    height: 600px;
+    
+}
