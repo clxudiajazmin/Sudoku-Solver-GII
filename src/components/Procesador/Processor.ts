@@ -5,7 +5,7 @@ import fillInPrediction from "../ReconocimientoImagen/Loadmodel";
 import SudokuSolver from "../Solver/sudokusolver";
 //Funciones procesamiento de imagen
 import getLargestConnectedComponent, {
-  Point,
+  Punto,
 } from "../ProcesamientoImagen/LargerComponent";
 import findHomographicTransform, {
   Transform,
@@ -17,9 +17,9 @@ import extractBoxes from "../ProcesamientoImagen/ExtraerRecuadros";
 import Image from "../ProcesamientoImagen/Imagen";
 import boxBlur from "../ProcesamientoImagen/Blur";
 
-// minimum number of boxes we want before trying to solve the puzzle
-const MIN_BOXES = 15;
-// size of image to use for processing
+// Mínimo de celdas del sudoku
+const MIN_BOXES = 17;
+// tamaño de la imagen a procesar
 const PROCESSING_SIZE = 900;
 
 export type VideoReadyPayload = { width: number; height: number };
@@ -31,59 +31,59 @@ interface ProcessorEvents {
 type ProcessorEventEmitter = StrictEventEmitter<EventEmitter, ProcessorEvents>;
 
 type SolvedBox = {
-  // was this a known digit?
-  isKnown: boolean;
-  // the digit for this box
+  // El número es conocido o no?
+  conocido: boolean;
+  // El digito 
   digit: number;
-  // a guess at how tall it should be drawn
+  // Altura de digito
   digitHeight: number;
-  // a guess at the rotation to draw it at
+  // Rotación de dígito
   digitRotation: number;
-  // where to draw it
-  position: Point;
+  // Posición para dibujar
+  position: Punto;
 };
 
 export default class Processor extends (EventEmitter as {
   new (): ProcessorEventEmitter;
 }) {
-  // the source for our video
   video: HTMLVideoElement;
-  // is the video actually running?
+  // El video está corriendo?
   isVideoRunning: boolean = false;
-  // are we in the middle of processing a frame?
+  // Se está procesando?
   isProcessing: boolean = false;
-  // the detected corners of the puzzle in video space
+  // Definición de las esquinas
   corners: {
-    topLeft: Point;
-    topRight: Point;
-    bottomLeft: Point;
-    bottomRight: Point;
+    topLeft: Punto;
+    topRight: Punto;
+    bottomLeft: Punto;
+    bottomRight: Punto;
   };
-  // the calculated grid lines in the video space
-  gridLines: { p1: Point; p2: Point }[];
-  // completely solved puzzle
+  // Punto para calculo de area
+  gridLines: { p1: Punto; p2: Punto }[];
+  // Sudoku resuelto
   solvedPuzzle: SolvedBox[][];
 
   /**
-   * Start streaming video from the back camera of a phone (or webcam on a computer)
-   * @param video A video element - needs to be on the page for iOS to work
+   * Empieza a usar la cámara
+   * @param video 
    */
   async startVideo(video: HTMLVideoElement) {
     this.video = video;
-    // start up the video feed
+    //Solo video no audio
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "environment", width: 640 },
       audio: false,
     });
-    // grab the video dimensions once it has started up
+    // Obtener las dimensiones del video capturado
     const canPlayListener = () => {
       this.video.removeEventListener("canplay", canPlayListener);
       this.emit("videoReady", {
         width: this.video.videoWidth,
         height: this.video.videoHeight,
       });
+      //Definimos la variable a true -> Se está ejecutando la cámara
       this.isVideoRunning = true;
-      // start processing
+      // Empieza el procesamiento
       this.processFrame();
     };
     this.video.addEventListener("canplay", canPlayListener);
@@ -98,12 +98,13 @@ export default class Processor extends (EventEmitter as {
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d");
-    // draw the video to the canvas
+    // Dibujamos el video capturado por la cámara al canvas
     context!.drawImage(video, 0, 0, width, height);
-    // get the raw image bytes
+    // Obtenemos los bytes
     const imageData = context!.getImageData(0, 0, width, height);
-    // convert to greyscale
+    // Convertimos a blanco y negro
     const bytes = new Uint8ClampedArray(width * height);
+    console.log(bytes);
     for (let y = 0; y < height; y++) {
       const row = y * width;
       for (let x = 0; x < width; x++) {
@@ -208,7 +209,7 @@ export default class Processor extends (EventEmitter as {
       digit,
       digitHeight,
       digitRotation,
-      isKnown: isKnown,
+      conocido: isKnown,
       position: textPosition,
     };
   }
@@ -242,12 +243,12 @@ export default class Processor extends (EventEmitter as {
     bottomLeft,
     bottomRight,
   }: {
-    topLeft: Point;
-    topRight: Point;
-    bottomLeft: Point;
-    bottomRight: Point;
+    topLeft: Punto;
+    topRight: Punto;
+    bottomLeft: Punto;
+    bottomRight: Punto;
   }) {
-    function length(p1: Point, p2: Point) {
+    function length(p1: Punto, p2: Punto) {
       const dx = p1.x - p2.x;
       const dy = p1.y - p2.y;
       return Math.sqrt(dx * dx + dy * dy);

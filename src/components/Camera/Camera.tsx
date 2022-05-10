@@ -63,7 +63,7 @@ function Camera() {
             context.stroke();
           }
           if (processor.solvedPuzzle) {
-            context.fillStyle = "rgba(0,0,0,1)";
+            context.fillStyle = "rgba(230,14,14,1)";
             for (let y = 0; y < 9; y++) {
               for (let x = 0; x < 9; x++) {
                 if (processor.solvedPuzzle[y][x]) {
@@ -72,9 +72,9 @@ function Camera() {
                     digitHeight,
                     digitRotation,
                     position,
-                    isKnown,
+                    conocido,
                   } = processor.solvedPuzzle[y][x];
-                  if (!isKnown) {
+                  if (!conocido) {
                     context.font = `bold ${digitHeight}px sans-serif`;
                     context.translate(position.x, position.y);
                     context.rotate(Math.PI - digitRotation);

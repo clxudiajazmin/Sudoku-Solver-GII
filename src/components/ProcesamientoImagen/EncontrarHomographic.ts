@@ -1,4 +1,4 @@
-import { Point } from "../ProcesamientoImagen/LargerComponent";
+import { Punto } from "../ProcesamientoImagen/LargerComponent";
 import * as math from "mathjs";
 
 export interface Transform {
@@ -16,10 +16,10 @@ export interface Transform {
 export default function findHomographicTransform(
   size: number,
   corners: {
-    topLeft: Point;
-    topRight: Point;
-    bottomLeft: Point;
-    bottomRight: Point;
+    topLeft: Punto;
+    topRight: Punto;
+    bottomLeft: Punto;
+    bottomRight: Punto;
   }
 ): Transform {
   const A = math.zeros(8, 8) as math.Matrix;
@@ -77,7 +77,7 @@ export default function findHomographicTransform(
   return { a, b, c, d, e, f, g, h };
 }
 
-export function transformPoint(point: Point, tranform: Transform) {
+export function transformPoint(point: Punto, tranform: Transform) {
   const { a, b, c, d, e, f, g, h } = tranform;
   const { x, y } = point;
 

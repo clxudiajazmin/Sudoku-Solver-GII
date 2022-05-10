@@ -1,5 +1,5 @@
 import Image from "../ProcesamientoImagen/Imagen";
-import { getConnectedComponent } from "../ProcesamientoImagen/LargerComponent";
+import { getRegionEntrePuntos } from "../ProcesamientoImagen/LargerComponent";
 
 export interface PuzzleBox {
   x: number;
@@ -38,25 +38,25 @@ export default function extractBoxes(greyScale: Image, thresholded: Image) {
       for (let searchY = searchY1; searchY < searchY2; searchY++) {
         for (let searchX = searchX1; searchX < searchX2; searchX++) {
           if (thresholded.bytes[searchY * size + searchX] === 255) {
-            const component = getConnectedComponent(
+            const component = getRegionEntrePuntos(
               thresholded,
               searchX,
               searchY
             );
             const foundWidth =
-              component.bounds.bottomRight.x - component.bounds.topLeft.x;
+              component.limites.bottomRight.x - component.limites.topLeft.x;
             const foundHeight =
-              component.bounds.bottomRight.y - component.bounds.topLeft.y;
+              component.limites.bottomRight.y - component.limites.topLeft.y;
             if (
-              component.points.length > 10 &&
+              component.puntos.length > 10 &&
               foundWidth < boxSize &&
               foundHeight < boxSize
             ) {
-              minX = Math.min(minX, component.bounds.topLeft.x);
-              minY = Math.min(minY, component.bounds.topLeft.y);
-              maxX = Math.max(maxX, component.bounds.bottomRight.x);
-              maxY = Math.max(maxY, component.bounds.bottomRight.y);
-              pointsCount += component.points.length;
+              minX = Math.min(minX, component.limites.topLeft.x);
+              minY = Math.min(minY, component.limites.topLeft.y);
+              maxX = Math.max(maxX, component.limites.bottomRight.x);
+              maxY = Math.max(maxY, component.limites.bottomRight.y);
+              pointsCount += component.puntos.length;
             }
           }
         }

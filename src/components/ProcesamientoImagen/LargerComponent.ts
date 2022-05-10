@@ -1,40 +1,41 @@
 import Image from "../ProcesamientoImagen/Imagen";
-
-export interface Point {
+//Definimos la interfaz para los puntos
+export interface Punto {
   x: number;
   y: number;
 }
 
-export class ConnectedRegion {
-  public points: Point[];
-  public bounds: { topLeft: Point; bottomRight: Point };
-  constructor(points: Point[], topLeft: Point, bottomRight: Point) {
-    this.points = points;
-    this.bounds = { topLeft, bottomRight };
+export class RegionEntrePuntos {
+  public puntos: Punto[];
+  public limites: { topLeft: Punto; bottomRight: Punto };
+  //Usaremos puntos y límites
+  constructor(puntos: Punto[], topLeft: Punto, bottomRight: Punto) {
+    this.puntos = puntos;
+    this.limites = { topLeft, bottomRight };
   }
   get width() {
-    return this.bounds.bottomRight.x - this.bounds.topLeft.x;
+    return this.limites.bottomRight.x - this.limites.topLeft.x;
   }
   get height() {
-    return this.bounds.bottomRight.y - this.bounds.topLeft.y;
+    return this.limites.bottomRight.y - this.limites.topLeft.y;
   }
   get aspectRatio() {
     return this.width / this.height;
   }
 }
 
-export function getConnectedComponent(
+export function getRegionEntrePuntos(
   image: Image,
   x: number,
   y: number
-): ConnectedRegion {
+): RegionEntrePuntos {
   const { width, height, bytes } = image;
   let minX = x;
   let minY = y;
   let maxX = x;
   let maxY = y;
-  const points: Point[] = [];
-  const frontier: Point[] = [];
+  const points: Punto[] = [];
+  const frontier: Punto[] = [];
   points.push({ x, y });
   frontier.push({ x, y });
   bytes[y * width + x] = 0;
@@ -62,7 +63,7 @@ export function getConnectedComponent(
       }
     }
   }
-  return new ConnectedRegion(
+  return new RegionEntrePuntos(
     points,
     { x: minX, y: minY },
     { x: maxX, y: maxY }
@@ -89,8 +90,8 @@ export default function getLargestConnectedComponent(
     minSize,
     maxSize,
   }: ConnectedComponentOptions
-): ConnectedRegion | null {
-  let maxRegion: ConnectedRegion | null = null;
+): RegionEntrePuntos | null {
+  let regionMaxima: RegionEntrePuntos | null = null;
   // clone the input image as this is a destructive operation
   const tmp = image.clone();
   const { width, height, bytes } = tmp;
@@ -98,9 +99,9 @@ export default function getLargestConnectedComponent(
     const row = y * width;
     for (let x = 0; x < width; x++) {
       if (bytes[row + x] === 255) {
-        const region = getConnectedComponent(tmp, x, y);
-        const width = region.bounds.bottomRight.x - region.bounds.topLeft.x;
-        const height = region.bounds.bottomRight.y - region.bounds.topLeft.y;
+        const region = getRegionEntrePuntos(tmp, x, y);
+        const width = region.limites.bottomRight.x - region.limites.topLeft.x;
+        const height = region.limites.bottomRight.y - region.limites.topLeft.y;
         if (
           region.aspectRatio >= minAspectRatio &&
           region.aspectRatio <= maxAspectRatio &&
@@ -109,12 +110,12 @@ export default function getLargestConnectedComponent(
           height <= maxSize &&
           width <= maxSize
         ) {
-          if (!maxRegion || region.points.length > maxRegion.points.length) {
-            maxRegion = region;
+          if (!regionMaxima || region.puntos.length > regionMaxima.puntos.length) {
+            regionMaxima = region;
           }
         }
       }
     }
   }
-  return maxRegion;
+  return regionMaxima;
 }
