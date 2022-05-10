@@ -1,7 +1,9 @@
 import StrictEventEmitter from "strict-event-emitter-types";
 import { EventEmitter } from "events";
+//Extracción de modelo y sudoku solver
 import fillInPrediction from "../ReconocimientoImagen/Loadmodel";
 import SudokuSolver from "../Solver/sudokusolver";
+//Funciones procesamiento de imagen
 import getLargestConnectedComponent, {
   Point,
 } from "../ProcesamientoImagen/LargerComponent";
@@ -9,11 +11,11 @@ import findHomographicTransform, {
   Transform,
   transformPoint,
 } from "../ProcesamientoImagen/EncontrarHomographic";
-import captureImage from "../ProcesamientoImagen/CapturarImagen";
-import adaptiveThreshold from "../ProcesamientoImagen/Threshols";
 import getCornerPoints from "../ProcesamientoImagen/Esquinas";
 import extractSquareFromRegion from "../ProcesamientoImagen/AplicarHomographic";
 import extractBoxes from "../ProcesamientoImagen/ExtraerRecuadros";
+import Image from "../ProcesamientoImagen/Imagen";
+import boxBlur from "../ProcesamientoImagen/Blur";
 
 // minimum number of boxes we want before trying to solve the puzzle
 const MIN_BOXES = 15;
@@ -61,15 +63,6 @@ export default class Processor extends (EventEmitter as {
   gridLines: { p1: Point; p2: Point }[];
   // completely solved puzzle
   solvedPuzzle: SolvedBox[][];
-  // performance stats
-  captureTime: number = 0;
-  thresholdTime: number = 0;
-  connectedComponentTime: number = 0;
-  cornerPointTime: number = 0;
-  extractPuzzleTime: number = 0;
-  extractBoxesTime: number = 0;
-  neuralNetTime: number = 0;
-  solveTime: number = 0;
 
   /**
    * Start streaming video from the back camera of a phone (or webcam on a computer)
@@ -97,6 +90,59 @@ export default class Processor extends (EventEmitter as {
     this.video.srcObject = stream;
     this.video.play();
   }
+
+  captureImagen(video: HTMLVideoElement) {
+    const canvas = document.createElement("canvas");
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    // draw the video to the canvas
+    context!.drawImage(video, 0, 0, width, height);
+    // get the raw image bytes
+    const imageData = context!.getImageData(0, 0, width, height);
+    // convert to greyscale
+    const bytes = new Uint8ClampedArray(width * height);
+    for (let y = 0; y < height; y++) {
+      const row = y * width;
+      for (let x = 0; x < width; x++) {
+        //const r = imageData.data[(y * width + x) * 4];
+        const g = imageData.data[(row + x) * 4 + 1];
+        // const b = imageData.data[(y * width + x) * 4 + 2];
+        // https://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
+        // const grey = 0.299 * r + 0.587 * g + 0.114 * b;
+        bytes[row + x] = g;
+      }
+    }
+    return new Image(bytes, width, height);
+  }
+
+
+  /**
+   * Applies adaptive thresholding to an image. Uses a fast box blur for speed.
+   * @param image Image to threshold
+   * @param threshold Threshold value - higher removes noise, lower more noise
+   */
+  adaptiveThreshold(
+    image: Image,
+    threshold: number,
+    blurSize: number
+  ): Image {
+    const { width, height, bytes } = image;
+    const blurred = boxBlur(image, blurSize, blurSize);
+    const blurredBytes = blurred.bytes;
+    for (let y = 0; y < height; y++) {
+      const row = y * width;
+      for (let x = 0; x < width; x++) {
+        bytes[row + width + x] =
+          blurredBytes[row + x] - bytes[row + width + x] > threshold ? 255 : 0;
+      }
+    }
+    return image;
+  }
+
+
 
   /**
    * Creates a set of grid lines mapped onto video space
@@ -241,19 +287,11 @@ export default class Processor extends (EventEmitter as {
     }
     try {
       // grab an image from the video camera
-      let startTime = performance.now();
-      const image = captureImage(this.video);
-      this.captureTime =
-        0.1 * (performance.now() - startTime) + this.captureTime * 0.9;
-
+      const image = this.captureImagen(this.video);
       // apply adaptive thresholding to the image
-      startTime = performance.now();
-      const thresholded = adaptiveThreshold(image.clone(), 20, 20);
-      this.thresholdTime =
-        0.1 * (performance.now() - startTime) + this.thresholdTime * 0.9;
-
+      const thresholded = this.adaptiveThreshold(image.clone(), 20, 20);
       // extract the most likely candidate connected region from the image
-      startTime = performance.now();
+      
       const largestConnectedComponent = getLargestConnectedComponent(
         thresholded,
         {
@@ -265,23 +303,17 @@ export default class Processor extends (EventEmitter as {
             Math.min(this.video.videoWidth, this.video.videoHeight) * 0.9,
         }
       );
-      this.connectedComponentTime =
-        0.1 * (performance.now() - startTime) +
-        this.connectedComponentTime * 0.9;
-
       // if we actually found something
       if (largestConnectedComponent) {
         // make a guess at where the corner points are using manhattan distance
-        startTime = performance.now();
+        
         const potentialCorners = getCornerPoints(largestConnectedComponent);
-        this.cornerPointTime =
-          0.1 * (performance.now() - startTime) + this.cornerPointTime * 0.9;
-
+        
         if (this.sanityCheckCorners(potentialCorners)) {
           this.corners = potentialCorners;
 
           // compute the transform to go from a square puzzle of size PROCESSING_SIZE to the detected corner points
-          startTime = performance.now();
+          
           const transform = findHomographicTransform(
             PROCESSING_SIZE,
             this.corners
@@ -302,29 +334,20 @@ export default class Processor extends (EventEmitter as {
             PROCESSING_SIZE,
             transform
           );
-          this.extractPuzzleTime =
-            0.1 * (performance.now() - startTime) +
-            this.extractPuzzleTime * 0.9;
-
           // extract the boxes that should contain the numbers
-          startTime = performance.now();
+         
           const boxes = extractBoxes(
             extractedImageGreyScale,
             extractedImageThresholded
           );
-          this.extractBoxesTime =
-            0.1 * (performance.now() - startTime) + this.extractBoxesTime * 0.9;
-
           // did we find sufficient boxes for a potentially valid sudoku puzzle?
           if (boxes.length > MIN_BOXES) {
             // apply the neural network to the found boxes and work out what the digits are
-            startTime = performance.now();
+          
             await fillInPrediction(boxes);
-            this.neuralNetTime =
-              0.1 * (performance.now() - startTime) + this.neuralNetTime * 0.9;
-
+            
             // solve the suoku puzzle using the dancing links and algorithm X - https://en.wikipedia.org/wiki/Knuth%27s_Algorithm_X
-            startTime = performance.now();
+         
             const solver = new SudokuSolver();
             // set the known values
             boxes.forEach((box) => {
@@ -338,8 +361,6 @@ export default class Processor extends (EventEmitter as {
             } else {
               this.solvedPuzzle = null;
             }
-            this.solveTime =
-              0.1 * (performance.now() - startTime) + this.solveTime * 0.9;
           }
         } else {
           this.corners = null;
