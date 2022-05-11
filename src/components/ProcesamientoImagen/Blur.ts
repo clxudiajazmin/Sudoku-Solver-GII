@@ -1,8 +1,5 @@
 import Image from "./Imagen";
 
-// Fast box blur algorithm
-// see - https://www.gamasutra.com/view/feature/3102/four_tricks_for_fast_blurring_in_.php?print=1
-
 function precompute(
   bytes: Uint8ClampedArray,
   width: number,
@@ -25,7 +22,6 @@ function precompute(
   return result;
 }
 
-// this is a utility function used by DoBoxBlur below
 function readP(
   precomputed: number[],
   w: number,

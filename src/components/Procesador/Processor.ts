@@ -126,7 +126,7 @@ export default class Processor extends (EventEmitter as {
 
 
   /**
-   * Utilizamos fast box blur
+   * THRESHOLD
    */
   adaptiveThreshold(
     imagen: Image,
