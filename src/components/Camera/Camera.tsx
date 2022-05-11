@@ -1,7 +1,5 @@
 import React, {useRef, useEffect, useState} from 'react';
-//import { loadLayersModel } from '@tensorflow/tfjs-converter';
 import './camera.css';
-//import { DefaultContext } from 'react-icons/lib';
 import Processor, { VideoReadyPayload } from "../Procesador/Processor";
 
 
@@ -11,9 +9,11 @@ function Camera() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const photoRef = useRef(null);
 
   const [videoWidth, setVideoWidth] = useState(100);
   const [videoHeight, setVideoHeight] = useState(100);
+  const [hasPhoto, setHasPhoto] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -109,10 +109,30 @@ function Camera() {
     };
   });
 
+  const photo= () =>{
+    const width= 414;
+    const height = width/(16/9);
+    let video = previewCanvasRef.current;
+    let photo = photoRef.current;
+
+    photo.width = width;
+    photo.height = height;
+
+    let ctx = photo.getContext('2d');
+    ctx.drawImage(video, 0, 0, width, height);
+    setHasPhoto(true);
+  }
+  const close= () =>{
+    let photo = photoRef.current;
+    let ctx = photo.getContext('2d');
+    ctx.clearRect(0,0,photo.width, photo.height); 
+    setHasPhoto(false);
+  }
+
   return (
       <div className="sudoku__camera">
           <div className="sudoku__camera-video">
-      {/* need to have a visible video for mobile safari to work */}
+      {}
       <video
         ref={videoRef}
         className="video-preview"
@@ -127,6 +147,11 @@ function Camera() {
         width={videoWidth}
         height={videoHeight}
       />
+      <button onClick={photo}>Capturar</button>
+      <button onClick={close}>Cerrar</button>
+      <div className={'result' + (hasPhoto ? 'hasPhoto' : '')}>
+        <canvas ref={photoRef}/>
+      </div>
     </div>
     </div>
     

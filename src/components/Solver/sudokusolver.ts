@@ -8,7 +8,7 @@ class Data {
     constructor(column: Column = null, guess: Guess = null) {
       this.column = column;
       this.guess = guess;
-      // start of pointing at ourself
+
       this.left = this;
       this.right = this;
       this.up = this;
@@ -52,7 +52,7 @@ class Data {
     x: number;
     y: number;
     entry: number;
-    // flag to indicate if this was a known value - used when displaying the solution
+    // Valor conocido
     isKnown: boolean = false;
     constructor(x: number, y: number, entry: number) {
       this.x = x;
@@ -62,68 +62,68 @@ class Data {
   }
   
   export default class SudokuSolver {
-    columnRoot: Column; // root column object
+    columnRoot: Column; 
     columnLookup: Column[] = [];
     rowLookup: Data[] = [];
-    solution: Data[] = []; // the solution
+    solution: Data[] = []; 
   
-    // Setup the circular lists for the X algorithm to work on
+    // Lista circular
     public constructor() {
       // construct the rows and columns
       // https://en.wikipedia.org/wiki/Exact_cover#Sudoku and https://www.stolaf.edu//people/hansonr/sudoku/exactcovermatrix.htm
       // https://www.kth.se/social/files/58861771f276547fe1dbf8d1/HLaestanderMHarrysson_dkand14.pdf
   
-      // create a doubly linked list of column headers
+      // Lista doble
       this.columnRoot = new Column();
       for (let col = 0; col < 81 * 4; col++) {
         const column = new Column();
         this.columnRoot.insertRight(column);
-        // stash the column in a quick lookup
+        // STASH
         this.columnLookup.push(column);
       }
-      // create a doubly linked list of rows and populate the columns for each row
+
       for (let x = 0; x < 9; x++) {
         for (let y = 0; y < 9; y++) {
           for (let entry = 0; entry < 9; entry++) {
             const guess = new Guess(x, y, entry + 1);
-            // create a node for the cell entry
+            //Nodos
             const entryColIdx = y * 9 + x;
             const entryColumn = this.columnLookup[entryColIdx];
             const entryConstraint = new Data(entryColumn, guess);
             this.rowLookup[(y * 9 + x) * 9 + entry] = entryConstraint;
-            // put the entry node in the corresponding column
+            //Nodo
             entryColumn.insertDown(entryConstraint);
             entryColumn.size++;
   
-            // create a node for the row constraint
+            // Nodo en fila
             const rowColIdx = 81 + y * 9 + entry;
             const rowColumn = this.columnLookup[rowColIdx];
             const rowConstraint = new Data(rowColumn, guess);
-            // and add it to the row
+
             entryConstraint.insertRight(rowConstraint);
-            // and to the column for this constraint
+
             rowColumn.insertDown(rowConstraint);
             rowColumn.size++;
   
-            // create a node for the column constraint
+            // Nodo en columna
             const colColIdx = 81 * 2 + x * 9 + entry;
             const colCol = this.columnLookup[colColIdx];
             const columnConstraint = new Data(colCol, guess);
-            // and add it to the row
+
             rowConstraint.insertRight(columnConstraint);
-            // and to the column for this constraint
+
             colCol.insertDown(columnConstraint);
             colCol.size++;
   
-            // create a node for the box constraint
+            // Nodo para caja
             const boxX = Math.floor(x / 3);
             const boxY = Math.floor(y / 3);
             const boxColumnIndex = 81 * 3 + (boxY * 3 + boxX) * 9 + entry;
             const boxColumn = this.columnLookup[boxColumnIndex];
             const boxConstraint = new Data(boxColumn, guess);
-            // add it the row
+
             columnConstraint.insertRight(boxConstraint);
-            // add it to the column
+
             boxColumn.insertDown(boxConstraint);
             boxColumn.size++;
           }
@@ -131,9 +131,8 @@ class Data {
       }
     }
   
-    // set a number on the puzzle covering any of the constraints that it satisfies
     setNumber(x: number, y: number, entry: number) {
-      // find the column
+      // Encontrar fila
       const row = this.rowLookup[(y * 9 + x) * 9 + entry];
       row.guess.isKnown = true;
       this.solution.push(row);
@@ -143,7 +142,7 @@ class Data {
       }
     }
   
-    // get the column with the smallest number of rows - this should give us the quickest solution
+    //Columna con menos filas -> más rápido
     getSmallestColumn() {
       let smallestSize = (this.columnRoot.right as Column).size;
       let smallestColumn = this.columnRoot.right as Column;
@@ -158,17 +157,16 @@ class Data {
       return smallestColumn;
     }
   
-    // search for a solution
     search(depth: number = 0): boolean {
-      // give up if weve gone to deep - there probably isn't a solution
+      // Evitar mucha profundidad
       if (depth > 100) {
         throw new Error("too deep - giving up");
       }
-      // we have no more columns - we have succeeded - send back the results
+      // Success
       if (this.columnRoot.right === this.columnRoot) {
         return true;
       }
-      // pick the column with the fewest rows
+      // Columna con menos filas
       let column = this.getSmallestColumn();
       this.cover(column);
       for (let row = column.down; row !== column; row = row.down) {
@@ -179,18 +177,18 @@ class Data {
         if (this.search(depth + 1)) {
           return true;
         }
-        // need to backtrack
+        // Backtrack
         for (let left = row.left; left !== row; left = left.left) {
           this.uncover(left.column);
         }
         this.solution.pop();
       }
-      // we've failed
+      // Fail
       this.uncover(column);
       return false;
     }
   
-    // cover a column - basically unlink the column from the list and unlink any rows from other columns
+    // Deslindar la columna de la lisa y cualquier fila de otras columnas
     cover(column: Column) {
       column.right.left = column.left;
       column.left.right = column.right;
@@ -203,7 +201,7 @@ class Data {
       }
     }
   
-    // uncover a column - put the rows back along with the column
+    //Agregar las filas devuelta a la columna
     uncover(column: Column) {
       for (let row = column.up; row !== column; row = row.up) {
         for (let left = row.left; left !== row; left = left.left) {

@@ -1,4 +1,4 @@
-import Image from "../ProcesamientoImagen/Imagen";
+import Image from "./Imagen";
 //Definimos la interfaz para los puntos
 export interface Punto {
   x: number;
@@ -77,11 +77,6 @@ type ConnectedComponentOptions = {
   maxSize: number;
 };
 
-/**
- *
- * @param image Input image
- * @param options: Filtering options
- */
 export default function getLargestConnectedComponent(
   image: Image,
   {
@@ -92,7 +87,6 @@ export default function getLargestConnectedComponent(
   }: ConnectedComponentOptions
 ): RegionEntrePuntos | null {
   let regionMaxima: RegionEntrePuntos | null = null;
-  // clone the input image as this is a destructive operation
   const tmp = image.clone();
   const { width, height, bytes } = tmp;
   for (let y = 0; y < height; y++) {

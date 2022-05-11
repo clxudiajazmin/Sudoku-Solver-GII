@@ -1,4 +1,4 @@
-import Image from "../ProcesamientoImagen/Imagen";
+import Image from "./Imagen";
 
 export default function displayImage(image: Image, canvas: HTMLCanvasElement) {
   const context = canvas.getContext("2d");

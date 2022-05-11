@@ -5,15 +5,11 @@ import fillInPrediction from "../ReconocimientoImagen/Loadmodel";
 import SudokuSolver from "../Solver/sudokusolver";
 //Funciones procesamiento de imagen
 import getLargestConnectedComponent, {
+  getRegionEntrePuntos,
   Punto,
-} from "../ProcesamientoImagen/LargerComponent";
-import findHomographicTransform, {
-  Transform,
-  transformPoint,
-} from "../ProcesamientoImagen/EncontrarHomographic";
+} from "../ProcesamientoImagen/RegionEntrePuntos";
 import getCornerPoints from "../ProcesamientoImagen/Esquinas";
-import extractSquareFromRegion from "../ProcesamientoImagen/AplicarHomographic";
-import extractBoxes from "../ProcesamientoImagen/ExtraerRecuadros";
+import findHomographicTransform, {transformPoint, extractSquareFromRegion, Transform} from "../ProcesamientoImagen/Homographic";
 import Image from "../ProcesamientoImagen/Imagen";
 import boxBlur from "../ProcesamientoImagen/Blur";
 
@@ -29,6 +25,16 @@ interface ProcessorEvents {
 }
 
 type ProcessorEventEmitter = StrictEventEmitter<EventEmitter, ProcessorEvents>;
+export interface PuzzleBox {
+  x: number;
+  y: number;
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  numberImage: Image;
+  contents: number;
+}
 
 type SolvedBox = {
   // El número es conocido o no?
@@ -42,6 +48,8 @@ type SolvedBox = {
   // Posición para dibujar
   position: Punto;
 };
+
+
 
 export default class Processor extends (EventEmitter as {
   new (): ProcessorEventEmitter;
@@ -65,7 +73,6 @@ export default class Processor extends (EventEmitter as {
 
   /**
    * Empieza a usar la cámara
-   * @param video 
    */
   async startVideo(video: HTMLVideoElement) {
     this.video = video;
@@ -102,18 +109,16 @@ export default class Processor extends (EventEmitter as {
     context!.drawImage(video, 0, 0, width, height);
     // Obtenemos los bytes
     const imageData = context!.getImageData(0, 0, width, height);
-    // Convertimos a blanco y negro
     const bytes = new Uint8ClampedArray(width * height);
-    console.log(bytes);
+    // Convertimos a blanco y negro
     for (let y = 0; y < height; y++) {
       const row = y * width;
       for (let x = 0; x < width; x++) {
-        //const r = imageData.data[(y * width + x) * 4];
+        const r = imageData.data[(y * width + x) * 4];
         const g = imageData.data[(row + x) * 4 + 1];
-        // const b = imageData.data[(y * width + x) * 4 + 2];
-        // https://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
-        // const grey = 0.299 * r + 0.587 * g + 0.114 * b;
-        bytes[row + x] = g;
+        const b = imageData.data[(y * width + x) * 4 + 2];
+        const grey = 0.299 * r + 0.587 * g + 0.114 * b;
+        bytes[row + x] = grey;
       }
     }
     return new Image(bytes, width, height);
@@ -121,17 +126,15 @@ export default class Processor extends (EventEmitter as {
 
 
   /**
-   * Applies adaptive thresholding to an image. Uses a fast box blur for speed.
-   * @param image Image to threshold
-   * @param threshold Threshold value - higher removes noise, lower more noise
+   * Utilizamos fast box blur
    */
   adaptiveThreshold(
-    image: Image,
+    imagen: Image,
     threshold: number,
     blurSize: number
   ): Image {
-    const { width, height, bytes } = image;
-    const blurred = boxBlur(image, blurSize, blurSize);
+    const { width, height, bytes } = imagen;
+    const blurred = boxBlur(imagen, blurSize, blurSize);
     const blurredBytes = blurred.bytes;
     for (let y = 0; y < height; y++) {
       const row = y * width;
@@ -140,25 +143,24 @@ export default class Processor extends (EventEmitter as {
           blurredBytes[row + x] - bytes[row + width + x] > threshold ? 255 : 0;
       }
     }
-    return image;
+    return imagen;
   }
 
 
 
   /**
-   * Creates a set of grid lines mapped onto video space
-   * @param transform The homographic transform to video space
+   * Crear los grids
    */
   createGridLines(transform: Transform) {
     const boxSize = PROCESSING_SIZE / 9;
     const gridLines = [];
     for (let l = 1; l < 9; l++) {
-      // horizonal line
+      // LINEA HORIZONTAL
       gridLines.push({
         p1: transformPoint({ x: 0, y: l * boxSize }, transform),
         p2: transformPoint({ x: PROCESSING_SIZE, y: l * boxSize }, transform),
       });
-      // vertical line
+      // LINEA VERTICAL
       gridLines.push({
         p1: transformPoint({ y: 0, x: l * boxSize }, transform),
         p2: transformPoint({ y: PROCESSING_SIZE, x: l * boxSize }, transform),
@@ -167,13 +169,84 @@ export default class Processor extends (EventEmitter as {
     return gridLines;
   }
 
+
+   extractBoxes(greyScale: Image, thresholded: Image) {
+    const results: PuzzleBox[] = [];
+    const size = greyScale.width;
+    const boxSize = size / 9;
+    const searchSize = boxSize / 5;
+    //Recorrer cada celda
+    for (let y = 0; y < 9; y++) {
+      for (let x = 0; x < 9; x++) {
+        let minX = Number.MAX_SAFE_INTEGER;
+        let minY = Number.MAX_SAFE_INTEGER;
+        let maxX = 0;
+        let maxY = 0;
+        let pointsCount = 0;
+        const searchX1 = x * boxSize + searchSize;
+        const searchY1 = y * boxSize + searchSize;
+        const searchX2 = x * boxSize + boxSize - searchSize;
+        const searchY2 = y * boxSize + boxSize - searchSize;
+        for (let searchY = searchY1; searchY < searchY2; searchY++) {
+          for (let searchX = searchX1; searchX < searchX2; searchX++) {
+            if (thresholded.bytes[searchY * size + searchX] === 255) {
+              const component = getRegionEntrePuntos(
+                thresholded,
+                searchX,
+                searchY
+              );
+              const foundWidth =
+                component.limites.bottomRight.x - component.limites.topLeft.x;
+              const foundHeight =
+                component.limites.bottomRight.y - component.limites.topLeft.y;
+              if (
+                component.puntos.length > 10 &&
+                foundWidth < boxSize &&
+                foundHeight < boxSize
+              ) {
+                minX = Math.min(minX, component.limites.topLeft.x);
+                minY = Math.min(minY, component.limites.topLeft.y);
+                maxX = Math.max(maxX, component.limites.bottomRight.x);
+                maxY = Math.max(maxY, component.limites.bottomRight.y);
+                pointsCount += component.puntos.length;
+              }
+            }
+          }
+        }
+
+        const foundWidth = maxX - minX;
+        const foundHeight = maxY - minY;
+        if (
+          pointsCount > 10 &&
+          foundWidth < boxSize &&
+          foundHeight < boxSize &&
+          foundWidth > boxSize / 10 &&
+          foundHeight > boxSize / 3
+        ) {
+          const numberImage = greyScale.subImage(
+            Math.max(0, minX - 2),
+            Math.max(0, minY - 2),
+            Math.min(size - 1, maxX + 2),
+            Math.min(size - 1, maxY + 2)
+          );
+          results.push({
+            x,
+            y,
+            minX,
+            maxX,
+            minY,
+            maxY,
+            numberImage,
+            contents: 0,
+          });
+        }
+      }
+    }
+    return results;
+  }
+
   /**
-   * Create a set of cells with coordinates in video space for drawing digits
-   * @param x Cell X
-   * @param y Cell Y
-   * @param digit The digit
-   * @param isKnown Is it a known digit?
-   * @param transform The homographic transform to video space
+   * Celdas en el video
    */
   getTextDetailsForBox(
     x: number,
@@ -183,7 +256,6 @@ export default class Processor extends (EventEmitter as {
     transform: Transform
   ): SolvedBox {
     const boxSize = PROCESSING_SIZE / 9;
-    // work out the line that runs vertically through the box in the original image space
     const p1 = transformPoint(
       { x: (x + 0.5) * boxSize, y: y * boxSize },
       transform
@@ -192,17 +264,17 @@ export default class Processor extends (EventEmitter as {
       { x: (x + 0.5) * boxSize, y: (y + 1) * boxSize },
       transform
     );
-    // the center of the box
+    // Centro
     const textPosition = transformPoint(
       { x: (x + 0.5) * boxSize, y: (y + 0.5) * boxSize },
       transform
     );
-    // approximate angle of the text in the box
+    // Angulo de texto
     const dx = p1.x - p2.x;
     const dy = p1.y - p2.y;
     const digitRotation = Math.atan2(dx, dy);
 
-    // appriximate height of the text in the box
+    // Altura de texto aprox.
     const digitHeight = 0.8 * Math.sqrt(dx * dx + dy * dy);
 
     return {
@@ -214,11 +286,6 @@ export default class Processor extends (EventEmitter as {
     };
   }
 
-  /**
-   * Map from the found solution to something that can be displayed in video space
-   * @param solver The solver with the solution
-   * @param transform The transform to video space
-   */
   createSolvedPuzzle(solver: SudokuSolver, transform: Transform) {
     const results: SolvedBox[][] = new Array(9);
     for (let y = 0; y < 9; y++) {
@@ -274,25 +341,24 @@ export default class Processor extends (EventEmitter as {
       return false;
     return true;
   }
-  /**
-   * Process a frame of video
-   */
+  
+  //Empieza procesado de video
   async processFrame() {
     if (!this.isVideoRunning) {
-      // no video stream so give up immediately
+      // No hay video 
       return;
     }
     if (this.isProcessing) {
-      // we're already processing a frame. Don't kill the computer!
+      // Se está procesando
       return;
     }
     try {
-      // grab an image from the video camera
+      // capturar imagen
       const image = this.captureImagen(this.video);
-      // apply adaptive thresholding to the image
+
+      // Aplicar threshold
       const thresholded = this.adaptiveThreshold(image.clone(), 20, 20);
-      // extract the most likely candidate connected region from the image
-      
+      // Extraer la región más grande entre los puntos
       const largestConnectedComponent = getLargestConnectedComponent(
         thresholded,
         {
@@ -304,59 +370,50 @@ export default class Processor extends (EventEmitter as {
             Math.min(this.video.videoWidth, this.video.videoHeight) * 0.9,
         }
       );
-      // if we actually found something
+      // Si se encuentra
       if (largestConnectedComponent) {
-        // make a guess at where the corner points are using manhattan distance
-        
+        // Calcular esquinas (Manhattan)
         const potentialCorners = getCornerPoints(largestConnectedComponent);
         
         if (this.sanityCheckCorners(potentialCorners)) {
           this.corners = potentialCorners;
-
-          // compute the transform to go from a square puzzle of size PROCESSING_SIZE to the detected corner points
-          
           const transform = findHomographicTransform(
             PROCESSING_SIZE,
             this.corners
           );
 
-          // we've got the transform so we can show where the gridlines are
+          // Mostrar gridlines
           this.gridLines = this.createGridLines(transform);
 
-          // extract the square puzzle from the original grey image
+          // Extraer tablero grayscale
           const extractedImageGreyScale = extractSquareFromRegion(
             image,
             PROCESSING_SIZE,
             transform
           );
-          // extract the square puzzle from the thresholded image - we'll use the thresholded image for determining where the digits are in the cells
+          // Extraer tablero de imagen threshold
           const extractedImageThresholded = extractSquareFromRegion(
             thresholded,
             PROCESSING_SIZE,
             transform
           );
-          // extract the boxes that should contain the numbers
-         
-          const boxes = extractBoxes(
+          // Extraer celdas con números
+          const boxes = this.extractBoxes(
             extractedImageGreyScale,
             extractedImageThresholded
           );
-          // did we find sufficient boxes for a potentially valid sudoku puzzle?
+          // Se cumple la condición de mínimos?
           if (boxes.length > MIN_BOXES) {
-            // apply the neural network to the found boxes and work out what the digits are
-          
+            // Aplicar la red neuronal
             await fillInPrediction(boxes);
-            
-            // solve the suoku puzzle using the dancing links and algorithm X - https://en.wikipedia.org/wiki/Knuth%27s_Algorithm_X
-         
+            // Dancing Links
             const solver = new SudokuSolver();
-            // set the known values
             boxes.forEach((box) => {
               if (box.contents !== 0) {
                 solver.setNumber(box.x, box.y, box.contents - 1);
               }
             });
-            // search for a solution
+            // Crear solución
             if (solver.search(0)) {
               this.solvedPuzzle = this.createSolvedPuzzle(solver, transform);
             } else {
@@ -377,7 +434,6 @@ export default class Processor extends (EventEmitter as {
       console.error(error);
     }
     this.isProcessing = false;
-    // process again
     setTimeout(() => this.processFrame(), 20);
   }
 }

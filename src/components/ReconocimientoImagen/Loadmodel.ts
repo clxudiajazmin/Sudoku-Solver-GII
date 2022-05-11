@@ -1,25 +1,21 @@
 import * as tf from "@tensorflow/tfjs";
-import { setWasmPath } from "@tensorflow/tfjs-backend-wasm";
-import { PuzzleBox } from "../ProcesamientoImagen/ExtraerRecuadros";
-
-setWasmPath(`${process.env.PUBLIC_URL}/tfjs-backend-wasm.wasm`);
+import { PuzzleBox } from "../Procesador/Processor";
 
 const CLASSES = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 const IMAGE_SIZE = 20;
-let _model: tf.LayersModel = undefined;
+let modelo: tf.LayersModel = undefined;
 let modelLoadingPromise: Promise<tf.LayersModel> = undefined;
 
 async function loadModel() {
-  if (_model) {
-    return _model;
+  if (modelo) {
+    return modelo;
   }
   if (modelLoadingPromise) {
     return modelLoadingPromise;
   }
   modelLoadingPromise = new Promise(async (resolve, reject) => {
-    await tf.setBackend("wasm");
-    _model = await tf.loadLayersModel('https://storage.googleapis.com/bucket_tfjs/model.json');
-    resolve(_model);
+    modelo = await tf.loadLayersModel('https://storage.googleapis.com/bucket_tfjs/model.json');
+    resolve(modelo);
     console.log("Model Cargado")
   });
 }
