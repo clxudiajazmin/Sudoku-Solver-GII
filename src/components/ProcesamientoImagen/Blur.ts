@@ -10,11 +10,11 @@ function precompute(
   let src = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      let tot = bytes[src];
-      if (x > 0) tot += result[dst - 1];
-      if (y > 0) tot += result[dst - width];
-      if (x > 0 && y > 0) tot -= result[dst - width - 1];
-      result[dst] = tot;
+      let total = bytes[src];
+      if (x > 0) total += result[dst - 1];
+      if (y > 0) total += result[dst - width];
+      if (x > 0 && y > 0) total -= result[dst - width - 1];
+      result[dst] = total;
       dst++;
       src++;
     }

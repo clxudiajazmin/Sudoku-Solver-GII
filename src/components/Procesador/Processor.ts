@@ -128,7 +128,7 @@ export default class Processor extends (EventEmitter as {
   /**
    * THRESHOLD
    */
-  adaptiveThreshold(
+  threshold(
     imagen: Image,
     threshold: number,
     blurSize: number
@@ -357,7 +357,7 @@ export default class Processor extends (EventEmitter as {
       const image = this.captureImagen(this.video);
 
       // Aplicar threshold
-      const thresholded = this.adaptiveThreshold(image.clone(), 20, 20);
+      const thresholded = this.threshold(image.clone(), 20, 20);
       // Extraer la región más grande entre los puntos
       const largestConnectedComponent = getLargestConnectedComponent(
         thresholded,
