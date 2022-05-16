@@ -1,4 +1,5 @@
 .sudoku__camera{
+    position: relative;
     display: flex;
     padding: 2rem 6rem;
     flex-direction: column;
@@ -7,6 +8,7 @@
 }
 
 .sudoku__camera-video{
+    position: relative;
     display: flex;
     padding: 2rem 6rem;
     flex-direction: column;
@@ -15,16 +17,48 @@
     
 }
 
-.result{
+.result {
     position: fixed;
-    padding: 2rem 6rem;
-    flex-direction: column;
-    justify-content: center;
+    top: 0;
+    left: 100%;
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     transition: 0.4s;
 }
 
-.result.hasPhoto {
+.result.hasPhoto{
+    position: absolute;
+    display: flex;
+    padding: 2rem 6rem;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center; 
     left: 0;
 }
+
+.photoB {
+    position: absolute;
+    bottom: 20px;
+
+    appearance: none;
+    border: none;
+    outline: none;
+
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+.closeB {
+    position: relative;
+    bottom: 20px;
+
+    appearance: none;
+    border: none;
+    outline: none;
+
+    padding: 8px 16px;
+    cursor: pointer;
+}
+

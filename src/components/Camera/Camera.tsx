@@ -25,12 +25,10 @@ function Camera() {
     }
   }, [videoRef]);
 
-  // render the overlay
   useEffect(() => {
     const interval = window.setInterval(() => {
       const canvas = previewCanvasRef.current;
       if (canvas && processor.isVideoRunning) {
-        // display the output from the processor
         const context = canvas.getContext("2d");
         if (context) {
           context.drawImage(processor.video, 0, 0);
@@ -97,7 +95,6 @@ function Camera() {
     };
   }, [previewCanvasRef]);
 
-  // update the video scale as needed
   useEffect(() => {
     function videoReadyListener({ width, height }: VideoReadyPayload) {
       setVideoWidth(width);
@@ -110,8 +107,8 @@ function Camera() {
   });
 
   const photo= () =>{
-    const width= 414;
-    const height = width/(16/9);
+    const width= videoWidth;
+    const height = videoHeight;
     let video = previewCanvasRef.current;
     let photo = photoRef.current;
 
@@ -122,6 +119,7 @@ function Camera() {
     ctx.drawImage(video, 0, 0, width, height);
     setHasPhoto(true);
   }
+
   const close= () =>{
     let photo = photoRef.current;
     let ctx = photo.getContext('2d');
@@ -131,28 +129,29 @@ function Camera() {
 
   return (
       <div className="sudoku__camera">
-          <div className="sudoku__camera-video">
+        <div className="sudoku__camera-video">
       {}
-      <video
-        ref={videoRef}
-        className="video-preview"
-        width={10}
-        height={10}
-        playsInline
-        muted
-      />
-      <canvas
-        ref={previewCanvasRef}
-        className="preview-canvas"
-        width={videoWidth}
-        height={videoHeight}
-      />
-      <button onClick={photo}>Capturar</button>
-      <button onClick={close}>Cerrar</button>
-      <div className={'result' + (hasPhoto ? 'hasPhoto' : '')}>
-        <canvas ref={photoRef}/>
+            <video
+              ref={videoRef}
+              className="video-preview"
+              width={10}
+              height={10}
+              playsInline
+              muted
+            />
+            <canvas
+              ref={previewCanvasRef}
+              className="preview-canvas"
+              width={videoWidth}
+              height={videoHeight}
+            />
+            <button className ="photoB " onClick={photo}>Capturar</button>
+
+            <div className={'result ' + (hasPhoto ? 'hasPhoto' : '')}>
+              <canvas ref={photoRef}/>
+              <button className ="closeB " onClick={close} >Cerrar</button>
+            </div>
       </div>
-    </div>
     </div>
     
   );
