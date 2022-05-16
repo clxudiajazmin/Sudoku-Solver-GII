@@ -1,4 +1,3 @@
-netlify.toml
 [[headers]]
 for = "/*"
 [headers.values]
