@@ -1,13 +1,16 @@
 .sudoku__camera{
     display: flex;
+    padding: 2rem 6rem;
     flex-direction: column;
     justify-content: center;
     align-items: center; 
 }
 
 .sudoku__camera-video{
-    margin-top: 50px;
-    width: 900px;
-    height: 900px;
+    display: flex;
+    padding: 2rem 6rem;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center; 
     
 }
