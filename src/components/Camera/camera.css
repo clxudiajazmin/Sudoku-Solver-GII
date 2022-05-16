@@ -14,3 +14,17 @@
     align-items: center; 
     
 }
+
+.result{
+    position: fixed;
+    padding: 2rem 6rem;
+    flex-direction: column;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    transition: 0.4s;
+}
+
+.result.hasPhoto {
+    left: 0;
+}
