@@ -92,6 +92,7 @@ export default class Processor extends (EventEmitter as {
       //Definimos la variable a true -> Se está ejecutando la cámara
       this.isVideoRunning = true;
       // Empieza el procesamiento
+      this.isProcessing = true;
       this.processFrame();
     };
     this.video.addEventListener("canplay", canPlayListener);
