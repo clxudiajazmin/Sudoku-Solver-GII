@@ -70,6 +70,7 @@ export default class Processor extends (EventEmitter as {
   gridLines: { p1: Punto; p2: Punto }[];
   // Sudoku resuelto
   solvedPuzzle: SolvedBox[][];
+  TiempoTotal: number = 0;
 
   /**
    * Empieza a usar la cámara
@@ -143,6 +144,7 @@ export default class Processor extends (EventEmitter as {
           blurredBytes[row + x] - bytes[row + width + x] > threshold ? 255 : 0;
       }
     }
+    console.log("La imagen: ", imagen);
     return imagen;
   }
 
@@ -242,6 +244,7 @@ export default class Processor extends (EventEmitter as {
         }
       }
     }
+    console.log("El resultado", results);
     return results;
   }
 
@@ -276,7 +279,9 @@ export default class Processor extends (EventEmitter as {
 
     // Altura de texto aprox.
     const digitHeight = 0.8 * Math.sqrt(dx * dx + dy * dy);
-
+    console.log(digit,
+      digitHeight,
+      digitRotation,isKnown,textPosition)
     return {
       digit,
       digitHeight,
@@ -353,6 +358,7 @@ export default class Processor extends (EventEmitter as {
       return;
     }
     try {
+      let startTime = performance.now();
       // capturar imagen
       const image = this.captureImagen(this.video);
 
@@ -419,6 +425,9 @@ export default class Processor extends (EventEmitter as {
             } else {
               this.solvedPuzzle = null;
             }
+            this.TiempoTotal =
+            0.1 * (performance.now() - startTime) + this.TiempoTotal * 0.9;
+            console.log("Tiempo de resolución", this.TiempoTotal)
           }
         } else {
           this.corners = null;
