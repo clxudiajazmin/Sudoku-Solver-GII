@@ -76,6 +76,7 @@ export default class Processor extends (EventEmitter as {
    * Empieza a usar la cámara
    */
   async startVideo(video: HTMLVideoElement) {
+    this.isProcessing = true;
     this.video = video;
     //Solo video no audio
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -89,15 +90,21 @@ export default class Processor extends (EventEmitter as {
         width: this.video.videoWidth,
         height: this.video.videoHeight,
       });
-      //Definimos la variable a true -> Se está ejecutando la cámara
-      this.isVideoRunning = true;
-      // Empieza el procesamiento
-      this.isProcessing = true;
-      this.processFrame();
     };
     this.video.addEventListener("canplay", canPlayListener);
     this.video.srcObject = stream;
-    this.video.play();
+
+    var playPromise = this.video.play();
+    if (playPromise !== undefined && this.isProcessing === true) {
+      playPromise.then(_ => {
+        console.log("Video funcionando");
+        this.isVideoRunning = true;
+        this.processFrame();
+      })
+      .catch(error => {
+        console.log("Video no funciona");
+      });
+    }
   }
 
   captureImagen(video: HTMLVideoElement) {
@@ -145,7 +152,6 @@ export default class Processor extends (EventEmitter as {
           blurredBytes[row + x] - bytes[row + width + x] > threshold ? 255 : 0;
       }
     }
-    console.log("La imagen: ", imagen);
     return imagen;
   }
 
@@ -280,9 +286,6 @@ export default class Processor extends (EventEmitter as {
 
     // Altura de texto aprox.
     const digitHeight = 0.8 * Math.sqrt(dx * dx + dy * dy);
-    console.log(digit,
-      digitHeight,
-      digitRotation,isKnown,textPosition)
     return {
       digit,
       digitHeight,
@@ -350,14 +353,7 @@ export default class Processor extends (EventEmitter as {
   
   //Empieza procesado de video
   async processFrame() {
-    if (!this.isVideoRunning) {
-      // No hay video 
-      return;
-    }
-    if (this.isProcessing) {
-      // Se está procesando
-      return;
-    }
+    this.isProcessing = true;
     try {
       let startTime = performance.now();
       // capturar imagen
@@ -416,7 +412,7 @@ export default class Processor extends (EventEmitter as {
             // Dancing Links
             const solver = new SudokuSolver();
             boxes.forEach((box) => {
-              console.log("El dígito", box.contents);
+              console.log("El dígito reconocido", box.contents);
               if (box.contents !== 0) {
                 solver.setNumber(box.x, box.y, box.contents - 1);
               }
@@ -447,4 +443,5 @@ export default class Processor extends (EventEmitter as {
     this.isProcessing = false;
     setTimeout(() => this.processFrame(), 20);
   }
+
 }

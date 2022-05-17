@@ -56,7 +56,6 @@ export default async function fillInPrediction(boxes: PuzzleBox[]) {
       return batched;
     });
     const input = tf.concat(images);
-    console.log(input)
     return model.predict(input, {
       batchSize: boxes.length,
     });

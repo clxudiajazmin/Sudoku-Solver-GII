@@ -14,6 +14,7 @@ function Camera() {
   const [videoWidth, setVideoWidth] = useState(100);
   const [videoHeight, setVideoHeight] = useState(100);
   const [hasPhoto, setHasPhoto] = useState(false);
+  const [isProceso, setProceso] = useState(true);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -28,7 +29,7 @@ function Camera() {
   useEffect(() => {
     const interval = window.setInterval(() => {
       const canvas = previewCanvasRef.current;
-      if (canvas && processor.isVideoRunning) {
+      if (canvas && processor.isVideoRunning && isProceso) {
         const context = canvas.getContext("2d");
         if (context) {
           context.drawImage(processor.video, 0, 0);
@@ -93,7 +94,7 @@ function Camera() {
     return () => {
       window.clearInterval(interval);
     };
-  }, [previewCanvasRef]);
+  }, [previewCanvasRef, isProceso]);
 
   useEffect(() => {
     function videoReadyListener({ width, height }: VideoReadyPayload) {
@@ -117,17 +118,16 @@ function Camera() {
 
     let ctx = photo.getContext('2d');
     ctx.drawImage(video, 0, 0, width, height);
+    setProceso(false);
     setHasPhoto(true);
-    processor.isVideoRunning = false;
-    processor.isProcessing = false;
   }
 
   const close= () =>{
     let photo = photoRef.current;
     let ctx = photo.getContext('2d');
-    ctx.clearRect(0,0,photo.width, photo.height); 
+    ctx.clearRect(0,0,photo.width, photo.height);
+    setProceso(true);
     setHasPhoto(false);
-    processor.isProcessing = true;
   }
 
   return (
