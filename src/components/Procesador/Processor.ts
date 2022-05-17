@@ -244,7 +244,7 @@ export default class Processor extends (EventEmitter as {
         }
       }
     }
-    console.log("El resultado", results);
+    
     return results;
   }
 
@@ -415,6 +415,7 @@ export default class Processor extends (EventEmitter as {
             // Dancing Links
             const solver = new SudokuSolver();
             boxes.forEach((box) => {
+              console.log("El dígito", box.contents);
               if (box.contents !== 0) {
                 solver.setNumber(box.x, box.y, box.contents - 1);
               }

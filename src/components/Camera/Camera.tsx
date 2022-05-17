@@ -19,7 +19,7 @@ function Camera() {
     const video = videoRef.current;
     if (video) {
       processor.startVideo(video).then(
-        () => console.log("Video started"),
+        () => console.log("Vídeo Iniciado"),
         (error) => alert(error.message)
       );
     }
@@ -118,6 +118,7 @@ function Camera() {
     let ctx = photo.getContext('2d');
     ctx.drawImage(video, 0, 0, width, height);
     setHasPhoto(true);
+    processor.isProcessing = false;
   }
 
   const close= () =>{
@@ -125,6 +126,7 @@ function Camera() {
     let ctx = photo.getContext('2d');
     ctx.clearRect(0,0,photo.width, photo.height); 
     setHasPhoto(false);
+    processor.isProcessing = true;
   }
 
   return (
