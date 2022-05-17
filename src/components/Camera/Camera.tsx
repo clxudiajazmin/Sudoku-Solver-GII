@@ -87,6 +87,7 @@ function Camera() {
                 }
               }
             }
+            console.log(processor.solvedPuzzle);
           }
         }
       }

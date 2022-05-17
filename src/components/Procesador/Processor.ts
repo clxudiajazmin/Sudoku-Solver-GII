@@ -283,7 +283,6 @@ export default class Processor extends (EventEmitter as {
     const dx = p1.x - p2.x;
     const dy = p1.y - p2.y;
     const digitRotation = Math.atan2(dx, dy);
-
     // Altura de texto aprox.
     const digitHeight = 0.8 * Math.sqrt(dx * dx + dy * dy);
     return {
@@ -412,7 +411,7 @@ export default class Processor extends (EventEmitter as {
             // Dancing Links
             const solver = new SudokuSolver();
             boxes.forEach((box) => {
-              console.log("El dígito reconocido", box.contents);
+              //console.log("El dígito reconocido", box.contents);
               if (box.contents !== 0) {
                 solver.setNumber(box.x, box.y, box.contents - 1);
               }
@@ -420,12 +419,14 @@ export default class Processor extends (EventEmitter as {
             // Crear solución
             if (solver.search(0)) {
               this.solvedPuzzle = this.createSolvedPuzzle(solver, transform);
+              
+              
             } else {
               this.solvedPuzzle = null;
             }
             this.TiempoTotal =
             0.1 * (performance.now() - startTime) + this.TiempoTotal * 0.9;
-            console.log("Tiempo de resolución", this.TiempoTotal)
+            console.log("Con ", boxes.length, " se resuelve en: ", this.TiempoTotal)
           }
         } else {
           this.corners = null;
@@ -440,6 +441,7 @@ export default class Processor extends (EventEmitter as {
     } catch (error) {
       console.error(error);
     }
+
     this.isProcessing = false;
     setTimeout(() => this.processFrame(), 20);
   }
